@@ -21,15 +21,18 @@ client.once('ready', () => {
 
 // 3. 核心：聽訊息並用 OpenRouter AI 對答
 client.on('messageCreate', async (message) => {
-    // 如果訊息係機械人自己發出嘅，就唔理佢，免得無限洗版
-    if (message.author.bot) return;
+    
+    // 🛡️ 終極防洗版三道鎖 🛡️
+    if (!message.author) return; 
+    if (message.author.bot) return; // 鎖1：如果是傳統機械人，跳過
+    if (message.author.id === client.user.id) return; // 鎖2：如果訊息發送者的 ID 跟我（機械人）一模一樣，絕對跳過！
 
     // 接收到用家訊息，準備傳畀 AI
     try {
-        // 顯示「輸入中...」等機械人望落有反應
+        // 顯示「輸入中...」
         await message.channel.sendTyping();
 
-        // 💡 安全修復：直接用 Node.js 18+ 內建、免安裝、免 import 嘅 native fetch！
+        // 呼叫 OpenRouter API
         const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
             method: "POST",
             headers: {
@@ -37,7 +40,7 @@ client.on('messageCreate', async (message) => {
                 "Content-Type": "application/json"
             },
             body: JSON.stringify({
-                "model": "google/gemini-2.5-flash", 
+                "model": "google/gemini-2.5-flash", // 換上更穩定的免費 Gemini 模型
                 "messages": [
                     { "role": "system", "content": "你是一個活潑、友善的 Discord 機械人，名叫蝶兄，請用繁體中文（帶有一點香港廣東話口語）親切地回覆用家。" },
                     { "role": "user", "content": message.content }
@@ -48,14 +51,18 @@ client.on('messageCreate', async (message) => {
         const data = await response.json();
         
         // 提取 AI 回覆嘅文字
-        const aiReply = data.choices?.[0]?.message?.content || "抱歉，我思考咗一下但唔知點覆你 QQ";
+        const aiReply = data.choices?.[0]?.message?.content;
 
-        // 在 Discord 回覆用家
-        await message.reply(aiReply);
+        if (aiReply && aiReply.trim() !== "") {
+            // 只有當 AI 真的有回覆正常內容時，才發送訊息
+            await message.reply(aiReply);
+        } else {
+            console.log("OpenRouter 回傳了空內容：", data);
+            // 唔好再覆「抱歉 QQ」，免得格式出錯時引發誤判，直接在後台 log 就好
+        }
 
     } catch (error) {
         console.error("AI 對答出錯啦:", error);
-        await message.reply("砂鍋大的錯誤！我個大腦短路咗，請稍後再試。");
     }
 });
 
