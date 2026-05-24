@@ -29,19 +29,17 @@ client.on('messageCreate', async (message) => {
         // 顯示「輸入中...」等機械人望落有反應
         await message.channel.sendTyping();
 
-        // 動態載入 fetch (應對新版 Node.js)
-        const { default: fetch } = await import('node-fetch');
-
-        // 呼叫 OpenRouter API
+        // 💡 安全修復：直接用 Node.js 18+ 內建、免安裝、免 import 嘅 native fetch！
         const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
             method: "POST",
             headers: {
-                "Authorization": `Bearer ${process.env.OPENROUTER_KEY}`, // 讀取你 Render 的 OpenRouter Key
+                "Authorization": `Bearer ${process.env.OPENROUTER_KEY}`,
                 "Content-Type": "application/json"
             },
             body: JSON.stringify({
-                "model": "meta-llama/llama-3-8b-instruct:free", // 免費版 AI 模型，你可以隨時改
+                "model": "google/gemini-2.5-flash", 
                 "messages": [
+                    { "role": "system", "content": "你是一個活潑、友善的 Discord 機械人，名叫蝶兄，請用繁體中文（帶有一點香港廣東話口語）親切地回覆用家。" },
                     { "role": "user", "content": message.content }
                 ]
             })
