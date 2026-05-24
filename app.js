@@ -24,18 +24,21 @@ client.on('messageCreate', async (message) => {
     // 🛡️ 防洗版三道鎖
     if (!message.author || message.author.bot || message.author.id === client.user.id) return;
 
+    // 🔍 診斷 1：睇吓機械人到底聽唔聽到你講嘢
+    console.log(`📥 收到來自 ${message.author.tag} 嘅訊息: "${message.content}"`);
+
     try {
         await message.channel.sendTyping();
 
-        // 呼叫 Mistral AI API（香港直連免 VPN，每月百萬次額度）
+        // 呼叫 Mistral AI API
         const response = await fetch("https://api.mistral.ai/v1/chat/completions", {
             method: "POST",
             headers: {
-                "Authorization": `Bearer ${process.env.MISTRAL_KEY}`, // 讀取 Render 的 MISTRAL_KEY
+                "Authorization": `Bearer ${process.env.MISTRAL_KEY}`, 
                 "Content-Type": "application/json"
             },
             body: JSON.stringify({
-                "model": "mistral-small-latest", // Mistral 速度極快、中文極佳的免費模型
+                "model": "mistral-small-latest", 
                 "messages": [
                     { "role": "system", "content": "你是一個活潑、友善的 Discord 機械人，名叫蝶兄，請用繁體中文（帶有一點香港廣東話口語）親切地回覆用家。" },
                     { "role": "user", "content": message.content }
@@ -45,14 +48,21 @@ client.on('messageCreate', async (message) => {
 
         const data = await response.json();
         
+        // 🔍 診斷 2：睇吓 Mistral 到底回傳咗咩 API 內容
+        console.log("📡 Mistral API 原始回傳數據:", JSON.stringify(data));
+        
         // 提取 Mistral 回覆文字
         const aiReply = data.choices?.[0]?.message?.content;
 
         if (aiReply && aiReply.trim() !== "") {
+            console.log(`📤 準備發送回覆: "${aiReply}"`);
             await message.reply(aiReply);
+        } else {
+            console.log("⚠️ AI 沒有回傳有效文字，或者格式不符。");
         }
     } catch (error) {
-        console.error("Mistral 對答出錯啦:", error);
+        // 🔍 診斷 3：捕捉任何連線或 Discord 發言權限錯誤
+        console.error("❌ Mistral 運作期間撞車，報錯原因:", error);
     }
 });
 
