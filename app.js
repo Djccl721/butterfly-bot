@@ -46,9 +46,9 @@ client.on('messageCreate', async (message) => {
         const data = await response.json();
         
         // 加入錯誤偵測，方便睇下 API 到底發生咩事
-        if (data.error) {
+    if (data.error) {
             console.log("❌ API 報錯:", data.error.message);
-            await message.reply("抱歉呀，蝶兄暫時連唔到去大腦，等我檢查下先！");
+            // await message.reply("抱歉呀，蝶兄暫時連唔到去大腦，等我檢查下先！"); 
             return;
         }
 
