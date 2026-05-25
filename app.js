@@ -61,5 +61,15 @@ client.on('messageCreate', async (message) => {
         console.log("❌ 發生錯誤:", e);
     }
 });
+// 每 10 分鐘發送一個請求去維持伺服器活躍
+setInterval(() => {
+    const url = process.env.RENDER_EXTERNAL_URL;
+    if (url) {
+        console.log("⏱️ 蝶兄自我檢測中：發送心跳訊號...");
+        fetch(url)
+            .then(() => console.log("✅ 心跳訊號已發送！"))
+            .catch(err => console.log("❌ 心跳失敗:", err));
+    }
+}, 600000);
 
 client.login(process.env.DISCORD_TOKEN);
