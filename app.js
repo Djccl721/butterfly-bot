@@ -73,3 +73,8 @@ setInterval(() => {
 }, 600000);
 
 client.login(process.env.DISCORD_TOKEN);
+// 搵 ID 的偵測器
+    if (message.content === "蝶兄，話我知你依家喺邊個頻道？") {
+        await message.reply(`依家呢個頻道嘅 ID 係: ${message.channel.id}`);
+        return;
+    }
