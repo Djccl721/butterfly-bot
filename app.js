@@ -13,14 +13,27 @@ const client = new Client({
     ]
 });
 
+// ⚠️ 在此設定你的指定頻道 ID (先保持為空，等你自己查到再填入)
+const ALLOWED_CHANNEL_ID = "123456789012345678"; 
+
 client.once('ready', () => {
     console.log(`🎉 機械人成功通電！已登入為: ${client.user.tag}`);
 });
 
 client.on('messageCreate', async (message) => {
-    console.log(`📡 【後台收到訊號！】發言人: ${message.author?.tag} | 內容: "${message.content}"`);
-
     if (message.author.bot) return;
+
+    // 1. 查詢頻道 ID 的功能 (隨時可以用)
+    if (message.content === "蝶兄，話我知你依家喺邊個頻道？") {
+        await message.reply(`依家呢個頻道嘅 ID 係: ${message.channel.id}`);
+        return;
+    }
+
+    // 2. 頻道鎖定檢查 (如果唔係目標頻道，直接跳過)
+    if (message.channel.id !== ALLOWED_CHANNEL_ID) return;
+
+    // 3. AI 對話邏輯
+    console.log(`📡 【後台收到訊號！】發言人: ${message.author?.tag} | 內容: "${message.content}"`);
 
     try {
         await message.channel.sendTyping();
@@ -45,15 +58,12 @@ client.on('messageCreate', async (message) => {
 
         const data = await response.json();
         
-        // 加入錯誤偵測，方便睇下 API 到底發生咩事
-    if (data.error) {
+        if (data.error) {
             console.log("❌ API 報錯:", data.error.message);
-            // await message.reply("抱歉呀，蝶兄暫時連唔到去大腦，等我檢查下先！"); 
             return;
         }
 
         const aiReply = data.choices?.[0]?.message?.content;
-
         if (aiReply) {
             await message.reply(aiReply);
         }
@@ -61,20 +71,12 @@ client.on('messageCreate', async (message) => {
         console.log("❌ 發生錯誤:", e);
     }
 });
-// 每 10 分鐘發送一個請求去維持伺服器活躍
+
 setInterval(() => {
     const url = process.env.RENDER_EXTERNAL_URL;
     if (url) {
-        console.log("⏱️ 蝶兄自我檢測中：發送心跳訊號...");
-        fetch(url)
-            .then(() => console.log("✅ 心跳訊號已發送！"))
-            .catch(err => console.log("❌ 心跳失敗:", err));
+        fetch(url).catch(err => console.log("❌ 心跳失敗:", err));
     }
 }, 600000);
 
 client.login(process.env.DISCORD_TOKEN);
-// 搵 ID 的偵測器
-    if (message.content === "蝶兄，話我知你依家喺邊個頻道？") {
-        await message.reply(`依家呢個頻道嘅 ID 係: ${message.channel.id}`);
-        return;
-    }
