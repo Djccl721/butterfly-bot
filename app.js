@@ -14,7 +14,7 @@ const client = new Client({
 });
 
 // ⚠️ 在此設定你的指定頻道 ID (先保持為空，等你自己查到再填入)
-const ALLOWED_CHANNEL_ID = "123456789012345678"; 
+const ALLOWED_CHANNEL_ID = " 1324747010540310659"; 
 
 client.once('ready', () => {
     console.log(`🎉 機械人成功通電！已登入為: ${client.user.tag}`);
