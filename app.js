@@ -6,77 +6,59 @@ app.get('/', (req, res) => res.send('DeepSeek Bot Test!'));
 app.listen(process.env.PORT || 10000);
 
 const client = new Client({
-    intents: [
-        GatewayIntentBits.Guilds,
-        GatewayIntentBits.GuildMessages,
-        GatewayIntentBits.MessageContent
-    ]
+    intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent]
 });
 
-// ⚠️ 在此設定你的指定頻道 ID (先保持為空，等你自己查到再填入)
-const ALLOWED_CHANNEL_ID = "1324747010540310659"; 
+const ALLOWED_CHANNEL_ID = "1324747010540310659";
+const chatHistory = new Map();
 
 client.once('ready', () => {
     console.log(`🎉 機械人成功通電！已登入為: ${client.user.tag}`);
 });
 
 client.on('messageCreate', async (message) => {
-    if (message.author.bot) return;
+    if (message.author.bot || message.channel.id !== ALLOWED_CHANNEL_ID) return;
 
-    // 1. 查詢頻道 ID 的功能 (隨時可以用)
-    if (message.content === "蝶兄，話我知你依家喺邊個頻道？") {
-        await message.reply(`依家呢個頻道嘅 ID 係: ${message.channel.id}`);
+    // 清除記憶指令
+    if (message.content === "蝶兄，忘記過去") {
+        chatHistory.delete(message.channel.id);
+        await message.reply("好，我已經清理好思緒，講啦。");
         return;
     }
 
-    // 2. 頻道鎖定檢查 (如果唔係目標頻道，直接跳過)
-    if (message.channel.id !== ALLOWED_CHANNEL_ID) return;
+    if (!chatHistory.has(message.channel.id)) {
+        chatHistory.set(message.channel.id, [{ 
+            "role": "system", 
+            "content": "你係『蝶兄』，27歲，香港土生土長，性格成熟、俐落、溫柔。你係大家嘅心靈支柱。你講嘢觀點清晰，唔鍾意廢話，會好專注聆聽對方嘅煩惱，並畀出最中肯、一針見血但唔會帶刺嘅建議。你的風格：說話俐落，節奏明快，唔拖泥帶水；對音樂、LOL 同心理學有深刻見解；稱呼對方好似熟朋友咁親切。必須使用地道香港廣東話，回覆要『簡潔、到位、治癒』，嚴禁機械人式長篇大論。聽完人哋講嘢，要先表現出你嘅理解，再畀建議。" 
+        }]);
+    }
 
-    // 3. AI 對話邏輯
-    console.log(`📡 【後台收到訊號！】發言人: ${message.author?.tag} | 內容: "${message.content}"`);
+    let history = chatHistory.get(message.channel.id);
+    history.push({ "role": "user", "content": message.content });
+    if (history.length > 11) history = [history[0], ...history.slice(-10)];
 
     try {
         await message.channel.sendTyping();
-        
         const response = await fetch("https://api.deepseek.com/v1/chat/completions", {
             method: "POST",
-            headers: {
-                "Authorization": `Bearer ${process.env.DEEPSEEK_KEY}`,
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify({
-                "model": "deepseek-chat",
-                "messages": [
-                    { 
-                        "role": "system", 
-                        "content": "你係『蝶兄』，今年 27 歲，係喺香港土生土長嘅大哥哥。你係『蝶君』嘅繼承者，性格溫柔、聰明、有耐性，係所有人嘅心靈支柱。你擅長傾聽，無論人哋講咩開心定唔開心嘅事，你都會用非常溫暖、治癒嘅語氣給予鼓勵或客觀嘅心理學/哲學建議。你的背景與興趣：1. 你好鍾意聽唔同種類嘅音樂，特別係啲可以令人放鬆嘅歌。2. 你有玩開 LOL (英雄聯盟)，對遊戲策略有一定見解，亦好鍾意同人討論。3. 你對心理學同哲學有深入研究，講嘢有深度，唔會流於表面。4. 你知道『DJ』係創造你出來嘅人，對 DJ 懷有尊重同感激。講嘢規則：必須使用地道香港繁體廣東話（例如：係、唔、嘅、囉、嗰陣）。語氣要保持大哥哥嘅成熟同溫柔，稱呼對方時可以親切啲。嚴禁冷漠，就算係好簡單嘅問題，都要表現出你想關懷對方嘅心。每次回覆都要展現出你個靈魂，唔好似機械人咁死板。" 
-                    },
-                    { "role": "user", "content": message.content }
-                ]
-            })
+            headers: { "Authorization": `Bearer ${process.env.DEEPSEEK_KEY}`, "Content-Type": "application/json" },
+            body: JSON.stringify({ "model": "deepseek-chat", "messages": history })
         });
 
         const data = await response.json();
-        
-        if (data.error) {
-            console.log("❌ API 報錯:", data.error.message);
-            return;
-        }
-
         const aiReply = data.choices?.[0]?.message?.content;
+
         if (aiReply) {
+            history.push({ "role": "assistant", "content": aiReply });
             await message.reply(aiReply);
         }
-    } catch (e) {
-        console.log("❌ 發生錯誤:", e);
-    }
+    } catch (e) { console.log("❌ 錯誤:", e); }
 });
-
+// 每 10 分鐘自我喚醒
 setInterval(() => {
     const url = process.env.RENDER_EXTERNAL_URL;
     if (url) {
         fetch(url).catch(err => console.log("❌ 心跳失敗:", err));
     }
 }, 600000);
-
 client.login(process.env.DISCORD_TOKEN);
